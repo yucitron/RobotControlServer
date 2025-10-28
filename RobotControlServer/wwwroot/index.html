@@ -1,0 +1,55 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <title>Robot Control (Demo)</title>
+</head>
+<body>
+    <h1>Robot Control – Demo</h1>
+
+    <button id="connectBtn">Robota Bağlan</button>
+    <input id="msg" placeholder="mesaj yaz (ping)" />
+    <button id="sendBtn">Ping Gönder</button>
+
+    <pre id="log"></pre>
+
+    <!-- SignalR browser client (CDN) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"
+            integrity="sha512-1u7Eo1f1M6u3tn2s6W9c0c0vF2m8S7U7hTtGm6GmF5X2u1wzCk8yT2C7EJwR7Vn7Zz7H8Yy0eQq4oJc3gJ0e0Q=="
+            crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+    <script>
+    const log = (t) => document.getElementById('log').textContent += t + "\n";
+
+    // Server'daki /robotHub'a bağlan
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl("/robotHub")
+        .withAutomaticReconnect()
+        .build();
+
+    connection.onclose(err => log("Bağlantı kapandı: " + (err?.message || "—")));
+    connection.onreconnected(id => log("Yeniden bağlandı."));
+
+    // Server push eventleri:
+    connection.on("serverInfo", m => log("SERVER: " + m));
+    connection.on("robotReply", m => log("EVENT robotReply: " + m));
+
+    async function start() {
+      await connection.start();
+      log("SignalR connected");
+    }
+
+    document.getElementById("connectBtn").onclick = async () => {
+      await start();
+      await connection.invoke("ConnectRobot");
+    };
+
+    document.getElementById("sendBtn").onclick = async () => {
+      const m = document.getElementById("msg").value || "hello robot";
+      // invoke cevabını da yazdır
+      const reply = await connection.invoke("PingRobot", m);
+      log("INVOKE return: " + reply);
+    };
+    </script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+﻿@page
+@model RobotControlServer.Pages.IndexModel
+@{
+    ViewData["Title"] = "Sensemotion";
+}
+
+<div class="wrap">
+    <!-- Yalnızca görsel: üstte banner/hero alanı -->
+    <div class="hero">
+        <img src="~/images/hero.png" asp-append-version="true" alt="Hero" class="hero-img" />
+    </div>
+
+    <div class="panel">
+        <!-- Dairesel yerleşim: butonlar ring içinde konumlandırılıyor -->
+        <div class="circle">
+            <div class="ring">
+                <button class="btn btn-a" id="btnA" aria-label="A">A</button>
+                <button class="btn btn-b" id="btnB" aria-label="B">B</button>
+                <button class="btn btn-c" id="btnC" aria-label="C">C</button>
+                <button class="btn btn-d" id="btnD" aria-label="D">D</button>
+                <button class="btn btn-e" id="btnE" aria-label="E">E</button>
+            </div>
+        </div>
+
+        <div class="log" id="log"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js" crossorigin="anonymous"></script>
+    <script>
+        // Son 5 satırı tut
+        const last = [];
+        function log(t){
+          last.push(t);
+          if (last.length > 5) last.splice(0, last.length - 5);
+          const el = document.getElementById('log');
+          if (el) { el.textContent = last.join("\n"); el.scrollTop = el.scrollHeight; }
+          console.log(t); // tarayıcı konsolu
+        }
+
+        // Hub bağlantısı
+        const connection = new signalR.HubConnectionBuilder()
+          .withUrl("/robotHub")
+          .withAutomaticReconnect()
+          .build();
+
+        connection.start()
+          .then(() => log("SignalR connected"))
+          .catch(err => console.error("Hub connect error:", err));
+
+        connection.on("serverInfo", m => log(m));
+
+        // A–E butonlarına tıklama → hem logla hem server'a bildir
+        ["A","B","C","D","E"].forEach(k => {
+          document.getElementById("btn"+k)?.addEventListener("click", async () => {
+            log(`Buton ${k}’e basıldı`);
+            try { await connection.invoke("ButtonPressed", k); }
+            catch(e){ console.error("Invoke error:", e); }
+          });
+        });
+    </script>
+}
+
